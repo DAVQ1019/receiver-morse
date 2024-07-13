@@ -1,0 +1,84 @@
+bool lightPrevOff = true;
+int startTime = 0;
+int endTime = 0;
+int offEndTime = 0;
+int offStartTime = 0;
+int codeLength = 50
+
+char morseCode[codeLength] = {};
+int i = 0;
+//int j;
+
+void setup() {
+
+  // put your setup code here, to run once:
+
+  int value;
+pinMode(A0, INPUT);
+Serial.begin(9600);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+int photoSensor = analogRead(A0);
+Serial.println(photoSensor);
+delay(500);
+if(photoSensor >= 899 && lightPrevOff)
+{
+  startTime = millis();
+  offEndTime = millis();
+  lightPrevOff = false;
+}
+else if(photoSensor < 899 && !lightPrevOff)
+{
+  endTime = millis();
+  offStartTime = millis();
+  lightPrevOff = true;
+}
+
+if (endTime - startTime > 900 && endTime - startTime < 1100)
+{
+  Serial.println(".");
+  morseCode[i] = '.';
+  i++;
+  startTime = 0;
+  endTime = 0;
+}
+else if (endTime - startTime > 2900 && endTime - startTime < 3100)
+{
+  Serial.println("-");
+  morseCode[i] = '-';
+  i++;
+  startTime = 0;
+  endTime = 0;
+}
+
+if (offEndTime - offStartTime >= 3)
+{
+  Serial.println(" ");
+  morseCode[i] = ' ';
+  i++;
+  offEndTime = 0;
+  offStartTime = 0;
+
+}
+
+for (int j; j < codeLength; j++){
+  Serial.print(morseCode[j]);
+}
+Serial.println("");
+
+if (photoSensor < 15){
+  //j = 0;
+  for(int k = 0; k < sizeof(morseCode); ++k) 
+  {
+    morseCode[k] = (char)0;
+    i = 0;
+  }
+
+  //Serial.println("test");
+}
+// dot >=899 as for 1 second 
+// dashes >=899 as for 3 seconds
+// a break "off" in between charaters is 3 seconds
+}
