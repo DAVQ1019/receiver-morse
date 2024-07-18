@@ -1,0 +1,164 @@
+bool lightPrevOff = true;
+unsigned long startTime = 0;
+unsigned long endTime = 0;
+unsigned long offEndTime = 0;
+unsigned long offStartTime = 0;
+const int codeLength = 5;
+char morseCode[codeLength] = {};
+int o = 0;
+//int j;
+
+int dotTime = 500;
+int dashTime = 1000;
+
+String SecretMessage = "";
+String character = "";
+String lookup[26] = {
+  ".-",  //A
+  "-...", //B
+  "-.-." //C
+};
+
+void setup() {
+
+  // put your setup code here, to run once:
+
+  int value;
+  pinMode(A0, INPUT);
+  Serial.begin(9600);
+}
+
+unsigned long prevT, startPulse, pulseLen;
+bool LightOn = false;
+bool lightPulseAvailable = false;
+/* code is to recieve light from the photocell and understand the dot and dashes */
+void loop() {
+  // put your main code here, to run repeatedly:
+  int photoSensor = analogRead(A0);
+  //Serial.println(photoSensor);
+  delay(500);
+  // Serial.print("LightPrevOff: ");
+  // Serial.print(lightPrevOff);
+  // Serial.print("\t EndTime-StartTime: ");
+  // Serial.print((endTime - startTime) / 1000);
+  // Serial.print("\t Off Delta: ");
+  // Serial.println((offEndTime - offStartTime) / 1000);
+
+  if (photoSensor >= 800 && !LightOn) {
+    startPulse = millis();
+    prevT = millis();
+    LightOn = true;
+  } else if (photoSensor <= 800 && LightOn) {
+    lightPulseAvailable = true;
+    prevT = millis();
+    pulseLen = millis() - startPulse;
+    LightOn = false;
+  }
+
+  if (lightPulseAvailable) {
+    if (pulseLen > dotTime - 100 && pulseLen < dotTime+100) {
+      Serial.println("I have a dot");
+       morseCode[o] = '.';
+      o++;
+      //THIS IS A DOT
+    } else if (pulseLen > dashTime -100 && pulseLen < dashTime+100) {
+      Serial.println("I have a dash");
+       morseCode[o] = '-';
+      o++;
+      //THIS IS A DASH
+    }
+    lightPulseAvailable = false;
+  }
+  if (millis() - prevT >= 3000) {
+    bool decoded = false;
+    String recvChar(morseCode);
+    Serial.print("Trying to decode letter: "); Serial.println(recvChar);
+    for (int i = 0; i < 26; i++) {
+      if (lookup[i] == recvChar) {
+        SecretMessage += (char)(i + 65);
+        //character = (char)(i+65);
+        Serial.print("The character is: ");
+        Serial.println(SecretMessage);
+        //Serial.println("test");
+        decoded = true;
+        break;
+      }
+    }
+    if (!decoded)
+    {
+      Serial.println("No matching morse code found");
+    }
+    memset(morseCode, '\0', codeLength);
+    o=0;
+    prevT = millis();
+    Serial.println("FUll word");
+    //I have all the chars I need to print
+  }
+
+
+  return;
+
+
+
+
+
+
+  if (photoSensor >= 800 && lightPrevOff) {
+    startTime = millis();
+    offEndTime = millis();
+    lightPrevOff = false;
+    lightPulseAvailable = false;
+  } else if (photoSensor < 800 && !lightPrevOff) {
+    endTime = millis();
+    offStartTime = millis();
+    lightPrevOff = true;
+    lightPulseAvailable = true;
+  }
+
+  if (lightPulseAvailable) {
+    if (endTime - startTime > 900 && endTime - startTime < 1100) {
+      //Serial.println(".");
+      morseCode[o] = '.';
+      o++;
+      startTime = 0;
+      endTime = 0;
+    } else if (endTime - startTime > 2900 && endTime - startTime < 3100) {
+      //Serial.println("-");
+      morseCode[o] = '-';
+      o++;
+      startTime = 0;
+      endTime = 0;
+    }
+  }
+  if (lightPulseAvailable && offEndTime - offStartTime >= 4) {
+    String recvWord(morseCode);
+    for (int i = 0; i < 26; i++) {
+      if (lookup[i] == recvWord) {
+        SecretMessage += (char)(i + 65);
+        Serial.println(SecretMessage);
+        //Serial.println("test");
+      }
+      //Serial.println("testing ");
+    }
+    Serial.println(" ");
+    morseCode[o] = ' ';
+    o++;
+    offEndTime = 0;
+    offStartTime = 0;
+  }
+
+  // for (int j; j < codeLength; j++) {
+  //   Serial.print(morseCode[j]);
+  // }
+  // Serial.println("");
+
+  if (photoSensor < 15) {
+    //j = 0;
+    for (int k = 0; k < sizeof(morseCode); ++k) {
+      morseCode[k] = (char)0;
+      o = 0;
+    }
+
+    //Serial.println("test");
+  }
+}
