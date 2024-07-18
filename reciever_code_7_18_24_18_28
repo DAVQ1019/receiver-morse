@@ -1,0 +1,133 @@
+bool lightPrevOff = true;
+unsigned long startTime = 0;
+unsigned long endTime = 0;
+unsigned long offEndTime = 0;
+unsigned long offStartTime = 0;
+const int codeLength = 6;
+char morseCode[codeLength] = {};
+int o = 0;
+//int j;
+
+int dotTime = 50;
+int dashTime = 100;
+int breakTime = 250;
+
+String SecretMessage = "";
+String character = "";
+String lookup[27] = {
+  ".-",    // A
+  "-...",  // B
+  "-.-.",  // C
+  "-..",   // D
+  ".",     // E
+  "..-.",  // F
+  "--.",   // G
+  "....",  // H
+  "..",    // I
+  ".---",  // J
+  "-.-",   // K
+  ".-..",  // L
+  "--",    // M
+  "-.",    // N
+  "---",   // O
+  ".--.",  // P
+  "--.-",  // Q
+  ".-.",   // R
+  "...",   // S
+  "-",     // T
+  "..-",   // U
+  "...-",  // V
+  ".--",   // W
+  "-..-",  // X
+  "-.--",  // Y
+  "--..",  // Z
+  "-...-"  // [ USED TO RESET SECRET MSG
+};
+
+void setup() {
+
+  // put your setup code here, to run once:
+
+  int value;
+  pinMode(A0, INPUT);
+  Serial.begin(9600);
+}
+
+bool ready2Decode;
+unsigned long prevT, startPulse, pulseLen;
+bool LightOn = false;
+bool lightPulseAvailable = false;
+/* code is to recieve light from the photocell and understand the dot and dashes */
+void loop() {
+  // put your main code here, to run repeatedly:
+  int photoSensor = analogRead(A0);
+  //Serial.println(photoSensor);
+  
+  // Serial.print("LightPrevOff: ");
+  // Serial.print(lightPrevOff);
+  // Serial.print("\t EndTime-StartTime: ");
+  // Serial.print((endTime - startTime) / 1000);
+  // Serial.print("\t Off Delta: ");
+  // Serial.println((offEndTime - offStartTime) / 1000);
+
+  if (photoSensor >= 800 && !LightOn) {
+    startPulse = millis();
+    prevT = millis();
+    LightOn = true;
+  } else if (photoSensor <= 800 && LightOn) {
+    lightPulseAvailable = true;
+    prevT = millis();
+    pulseLen = millis() - startPulse;
+    LightOn = false;
+  }
+
+  if (lightPulseAvailable) {
+    if (pulseLen > dotTime - 10 && pulseLen < dotTime+10) {
+      Serial.println("I have a dot");
+       morseCode[o] = '.';
+      o++;
+      //THIS IS A DOT
+    } else if (pulseLen > dashTime -10 && pulseLen < dashTime+10) {
+      Serial.println("I have a dash");
+       morseCode[o] = '-';
+      o++;
+      //THIS IS A DASH
+    }
+    lightPulseAvailable = false;
+    ready2Decode = true;
+  }
+
+  if (ready2Decode && millis() - prevT >= breakTime) {
+    bool decoded = false;
+    String recvChar(morseCode);
+    Serial.print("Decoding Morse Code letter: "); Serial.println(recvChar);
+    for (int i = 0; i < 28; i++) {
+      if (lookup[i] == recvChar) {
+        char letter = (char)(i + 65);
+        //Serial.println(letter);
+        if (letter == '[')
+        {  
+          Serial.print("The secret message is: ");
+          Serial.println(SecretMessage);
+          SecretMessage = "";
+        }
+        else
+        {
+          SecretMessage += letter;
+        }
+        decoded = true;
+        break;
+      }
+    }
+    if (!decoded)
+    {
+      Serial.println("No matching morse code found");
+    }
+    memset(morseCode, '\0', codeLength);
+    o=0;
+    ready2Decode = false;
+    prevT = millis();
+    Serial.println("FUll word");
+    //I have all the chars I need to print
+  }
+}
